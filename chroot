@@ -1,0 +1,48 @@
+Способ надёжнее простого dd по ssh:
+mkdir /target
+mount none -t tmpfs -o size=1G /target/
+cp /usr/share/debootstrap/scripts/* /debootstrap/scripts/
+debootstrap stable /target/ https://deb.debian.org/debian/
+echo "Killer_system" > /target/etc/debian_chroot
+chroot /target
+mount none -t proc /proc/
+mount none -t sysfs /sys/
+mount none -t devtmpfs /dev/
+mount none -t devpts /dev/pts/
+apt install openssh-server
+echo "Port 11122" >> /etc/ssh/sshd_config
+echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+/etc/init.d/ssh start
+passwd root
+
+Теперь подключаетесь к ssh, запущенному из озу:
+ssh root@<IP> -p 11122
+Передёргиваем диск:
+echo 1 > /sys/block/sda/device/delete
+echo 1 > /sys/block/nvme0n1/device/device/remove
+echo 1 > /sys/block/nvme1n1/device/device/remove
+echo 1 > /sys/bus/pci/rescan
+
+
+Теперь sda станет sdb
+dd if=/dev/urandom of=/dev/nvme0n1 bs=4096
+В конце работы:
+echo b > /proc/sysrq-trigger
+Это перезапустит сервак, но он конечно уже не загрузится.
+
+В отличии от предыдущего способа, мы 100% сможем дождаться завершения работы dd
+
+https://web.archive.org/web/20190326142043/http://forum.notebookreview.com/threads/secure-erase-hdds-ssds-sata-nvme-using-hdparm-nvme-cli-on-linux.827525/
+https://tinyapps.org/docs/nvme-sanitize
+sudo nvme list
+nvme id-ctrl -H /dev/nvme1n2 | grep Sanitize
+nvme sanitize -a 2 /dev/nvme1n2
+
+or Secure Erase
+
+
+nvme id-ctrl -H /dev/nvme0n1 | grep "Format NVM"
+nvme format /dev/nvme0 --ses=1
+
+
+https://wiki.archlinux.org/title/Solid_state_drive/Memory_cell_clearing
